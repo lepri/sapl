@@ -47,9 +47,7 @@ ORDENACAO_PESQUISA_MATERIA = (
 
 class Cliente(TenantMixin):
     nome = models.CharField(max_length=255, verbose_name=_('Nome'))
-
-    # default true, schema will be automatically created and synced when it is saved
-    auto_create_schema = True
+    auto_create_schema = False
 
 
 class Dominio(DomainMixin):

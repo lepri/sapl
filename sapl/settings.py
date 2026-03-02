@@ -105,6 +105,8 @@ INSTALLED_APPS = (
 
 SHARED_APPS = INSTALLED_APPS
 TENANT_APPS = INSTALLED_APPS
+TENANT_CREATION_FAKES_MIGRATIONS = True
+TENANT_BASE_SCHEMA = "public"
 
 # FTS = Full Text Search
 # Desabilita a indexação textual até encontramos uma solução para a issue
