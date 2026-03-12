@@ -3,13 +3,26 @@
   background: #1c1b1b;
   font-family: Verdana;
   font-size: x-large;
+
+  .header-painel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFF;
+    gap: 20px;
+
+    .header-painel-col-1 {
+      display: flex;
+      align-items: center;
+    }
+  }
   .text-title {
-    color: #4fa64d;
+    color: #FFF;
     margin: 0.5rem;
 	font-weight: bold;
   }
   .text-subtitle {
-    color: #459170;
+    color: #FFF;
 	font-weight: bold;
   }
   .data-hora {
@@ -26,7 +39,7 @@
   .painels {
     flex-wrap: wrap;
   }
-  .painel{
+  .painel {
     margin-top: 1rem;
     table {
       width: 100%;

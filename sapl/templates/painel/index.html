@@ -34,102 +34,76 @@
       }
     </style>
   </head>
-  <body class="painel-principal">
+  <body class="painel-principal mx-5">
       <audio type="hidden" id="audio" src="{% webpack_static 'audio/ring.mp3' %}"></audio>
 
-      <div class="d-flex justify-content-center">
-        <h1 id="sessao_plenaria" class="title text-title"></h1>
-      </div>
-      <div class="row ">
-        <div class="col text-center">
-          <span id="sessao_plenaria_data" class="text-value"></span>
-        </div> 
-        <div class="col text-center">
-          <span id="sessao_plenaria_hora_inicio" class="text-value"></span>
+      <div class="d-flex justify-content-center row">
+        <div class="header-painel">
+          <div class="header-painel-col-1">
+            <div class="col-1">
+              <img src="" id="logo-painel" class="logo-painel" alt=""/>
+            </div>
+            <h1>
+              <span id="casa_nome" class="d-block"></span>
+              <span id="sessao_plenaria" class="d-block"></span>
+            </h1>
+          </div>
+          <div class="col-2">
+            <p id="sessao_plenaria_data" class="text-value"></p>
+            <p id="sessao_plenaria_hora_inicio" class="text-value"></p>
+          </div>
         </div>
-      </div>    
-
-      <div class="row justify-content-center">
-        <div class="col-1">
-          <img src="" id="logo-painel" class="logo-painel" alt=""/>
-        </div>
       </div>
-
       <div class="row justify-content-center">
         <h2 class="text-danger"><span id="message"></span></h2>
       </div>
 
-      <div class="row">
+      <div class="row my-4">
         <div class="col text-center"><span class="text-value data-hora" id="date"></span></div>
         <div class="col text-center"><span class="text-value data-hora" id="relogio"></span></div>
       </div>
+      <div class="w-75 mx-auto">
+        <div id="parlamentares" class="text-value text-center fs-1"></div>
+      </div>
 
-
-      <div class="">
-          <div class="d-flex justify-content-start">
-              <div class="col-md-4">
-                  <div class="text-center painel">
-                      <h2 class="text-subtitle">Parlamentares</h2>
-                      <span id="parlamentares" class="text-value text-center"></span>
-                  </div>
-              </div>
-              <div class="d-flex col-md-8 painels">
-                  <div class="col-md-6 text-center painel" id="aparecer_oradores">
-                      <h2 class="text-subtitle">Oradores</h2>
-                      <span id="orador"></span>
-                  </div>
-
-                  <div class="col-md-6 text-left painel">
-                      <div class="d-flex align-items-left justify-content-left mb-2">
-                          <h2 class="text-subtitle mb-0">Cronômetros</h2>
-                          <button class="btn btn-sm btn-secondary ms-2" onclick="changeFontSize('box_cronometros', -1)">
-                              A-
-                          </button>
-                          <button class="btn btn-sm btn-secondary ms-2" onclick="changeFontSize('box_cronometros', 1)">
-                              A+
-                          </button>
-                      </div>
-                      <div class="text-value" id="box_cronometros">
-                          Discurso: <span id="cronometro_discurso"></span><br>
-                          Aparte: <span id="cronometro_aparte"></span><br>
-                          Questão de Ordem: <span id="cronometro_ordem"></span><br>
-                          Considerações Finais: <span id="cronometro_consideracoes"></span>
-                      </div>
-                  </div>
-
-                  <div class="col-md-6 text-left painel" id="resultado_votacao_div">
-                      <div class="d-flex align-items-left justify-content-left mb-2">
-                          <h2 class="text-subtitle mb-0">Resultado</h2>
-                          <button class="btn btn-sm btn-secondary ms-2" onclick="changeFontSize('box_votacao', -1)">
-                              A-
-                          </button>
-                          <button class="btn btn-sm btn-secondary ms-2" onclick="changeFontSize('box_votacao', 1)">
-                              A+
-                          </button>
-                      </div>
-                      <div id="box_votacao">
-                          <span id="votacao" class="text-value"></span>
-                          <span id="resultado_votacao" lass="text-title"></span>
-                      </div>
-                  </div>
-
-                  <div class="col-md-6 text-center painel" id="obs_materia_div">
-                      <h2 class="text-subtitle" id="mat_em_votacao">Matéria em Votação</h2>
-                      <span id="materia_legislativa_texto" class="text-value"></span>
-                      <br>
-                      <span id="materia_legislativa_ementa" class="text-value"></span>
-                      <br>
-                      <span id="observacao_materia" class="text-value"></span>
-                  </div>
-
-                  <div class="col-md-6 text-center painel" id="tema_solene_div" style="display: none">
-                      <h2 class="text-subtitle">Tema da Sessão Solene</h2>
-                      <span id="sessao_solene_tema" class="text-value"></span>
-                  </div>
-              </div>
+      <div class="row mt-3">
+        <div class="col-md-2 painels">
+            <div class="d-flex align-items-left justify-content-center mb-2">
+              <h2 class="text-subtitle mb-0">Cronômetros</h2>
+            </div>
+            <div class="text-value" id="box_cronometros">
+              Discurso: <span id="cronometro_discurso"></span><br>
+              Aparte: <span id="cronometro_aparte"></span><br>
+              Questão de Ordem: <span id="cronometro_ordem"></span><br>
+              Considerações Finais: <span id="cronometro_consideracoes"></span>
+            </div>
           </div>
-      </div>
-      </div>
+        <div class="col-md-2"></div>
+        <div class="col-md-4 text-center painel" id="obs_materia_div">
+            <h2 class="text-subtitle" id="mat_em_votacao">Matéria em Votação</h2>
+            <span id="materia_legislativa_texto" class="text-value"></span>
+            <br>
+            <span id="materia_legislativa_ementa" class="text-value"></span>
+            <br>
+            <span id="observacao_materia" class="text-value"></span>
+          </div>
+        <div class="col-md-1"></div>
+
+          <div class="col-md-3 text-left painel" id="resultado_votacao_div">
+            <div class="d-flex align-items-left justify-content-center mb-2">
+              <h2 class="text-subtitle mb-0">Resultado</h2>
+            </div>
+            <div id="box_votacao">
+              <span id="votacao" class="text-value"></span>
+              <span id="resultado_votacao" lass="text-title"></span>
+            </div>
+          </div>
+
+          <div class="col-md-6 text-center painel" id="tema_solene_div" style="display: none">
+            <h2 class="text-subtitle">Tema da Sessão Solene</h2>
+            <span id="sessao_solene_tema" class="text-value"></span>
+          </div>
+        </div>
   </body>
 
   {% block webpack_loader_js %}
@@ -267,9 +241,10 @@
            url: "{% url 'sapl.painel:dados_painel' sessao_id %}",
            type: "GET",
            success: function(data) {
+              $("#casa_nome").text(data["casa_nome"])
               $("#sessao_plenaria").text(data["sessao_plenaria"])
-              $("#sessao_plenaria_data").text("Data Início: " + data["sessao_plenaria_data"])
-              $("#sessao_plenaria_hora_inicio").text("Hora Início: " + data["sessao_plenaria_hora_inicio"])
+              $("#sessao_plenaria_data").text("Data de Início: " + data["sessao_plenaria_data"])
+              $("#sessao_plenaria_hora_inicio").text("Hora de Início: " + data["sessao_plenaria_hora_inicio"])
               $("#sessao_solene_tema").text(data["tema_solene"])
               if (data["status_painel"] == false) {
                 $("#message").text("PAINEL ENCONTRA-SE FECHADO");
@@ -300,24 +275,21 @@
 
               if (data["status_painel"] == true) {
                   mostrar_voto = data["mostrar_voto"];
-                  presentes.append('<table id="parlamentares_list">');
+                  presentes.append('<div class="row" id="parlamentares_list">');
                   $.each(presentes_list, function (index, parlamentar) {
 
-
                     if (parlamentar.voto == 'Voto Informado' && mostrar_voto == false){
-                      $('#parlamentares_list').append('<tr><td><img src="' +
-                          parlamentar.fotografia + ' /><td style="padding-right:20px; color:yellow"> ' +
-                          parlamentar.nome +
-                          '</td> <td style="padding-right:20px; color:yellow">' +
-                          parlamentar.partido + '</td> <td style="padding-right:20px; color:yellow">'
-                          + '</td></tr>')
+                      $('#parlamentares_list').append('<div class="col mb-4"><div class="d-flex align-items-center">' +
+                          '<img src="' + parlamentar.fotografia + ' /></div><div> ' +
+                          parlamentar.nome + '(' + parlamentar.partido +  ')</div>')
                     }
                     else{
                       $('#parlamentares_list').append(show_voto(parlamentar))
                     }
 
                   });
-                  presentes.append('</table>')
+                  $('#parlamentares_list').append('</div>')
+                  presentes.append('</div>')
 
                   if (data["oradores"].length > 0){
                     $('#aparecer_oradores').show();
@@ -489,14 +461,14 @@
               console.error(err);
            },
            dataType: "json",
-           complete: setTimeout(function() {poll()}, 500),
+           //complete: setTimeout(function() {poll()}, 500),
            timeout: 20000 // TODO: decrease
         })
       })();
       });
 
      function show_voto(parlamentar) {
-      color = 'white'
+      color = 'transparent'
       if (parlamentar.voto == "Sim"){
           color = 'green'
       }
@@ -504,11 +476,11 @@
           color = 'red'
       }
 
-      return ('<tr> <td style="width: 8%">' +
-                `<img width="100%" style="padding-bottom:5px" src="${parlamentar.fotografia}" /> </td> ><td style="padding-right:20px">` +
-                `<font color="`+color+`">${parlamentar.nome}</font> </td> <td style="padding-right:20px">` +
-                `<font color="`+color+`">${parlamentar.partido}</font> </td> <td style="padding-right:20px">` +
-                `<font color="`+color+`">${parlamentar.voto}</font> </td></tr>`)
+      return ('<div class="col-md-4 mb-5 text-center d-flex align-items-center"><div class="mr-3" style="width:100px;height:100px;">' +
+                `<img class="rounded-circle w-100 h-100" style="object-fit:cover;" src="${parlamentar.fotografia}" /> </div><div class="fs-1"><div>` +
+                `${parlamentar.nome} (${parlamentar.partido})</div>` +
+                `<div class="mt-2" style="width: 70px; background-color:`+color+`">${parlamentar.voto}` +
+                `</div></div></div></div>`)
      }
 
       function changeFontSize(elementId, increment) {
