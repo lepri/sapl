@@ -22,7 +22,7 @@ from sapl.sessao.models import (ExpedienteMateria, OradorExpediente, OrdemDia,
                                 PresencaOrdemDia, RegistroVotacao,
                                 SessaoPlenaria, SessaoPlenariaPresenca,
                                 VotoParlamentar, RegistroLeitura)
-from sapl.utils import filiacao_data, get_client_ip, sort_lista_chave
+from sapl.utils import filiacao_data, get_client_ip, sort_lista_chave, crop_fotografia
 
 from .models import Cronometro
 
@@ -400,7 +400,7 @@ def get_presentes(pk, response, materia):
                  'nome': p.parlamentar.nome_parlamentar,
                  'partido': partido,
                  'voto': '',
-                 'fotografia': p.parlamentar.fotografia_cropped
+                 'fotografia': crop_fotografia(p.parlamentar)
                  })
 
         elif not p.parlamentar.ativo or not mandatos:

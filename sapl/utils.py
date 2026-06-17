@@ -40,6 +40,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 import django_filters
 from easy_thumbnails import source_generators
+from image_cropping.utils import get_backend
 import magic
 import requests
 from unipath.path import Path
@@ -57,6 +58,30 @@ SEPARADOR_HASH_PROPOSICAO = 'K'
 TIME_PATTERN = '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
 
 MIN_PASSWORD_LENGTH = 8
+
+
+def crop_fotografia(obj):
+    logger = logging.getLogger(__name__)
+    thumbnail_url = ""
+    try:
+        import os
+        if not obj.fotografia or not os.path.exists(obj.fotografia.path):
+            return thumbnail_url
+        thumbnail_url = get_backend().get_thumbnail_url(
+            obj.fotografia,
+            {
+                'size': (128, 128),
+                'box': obj.cropping,
+                'crop': True,
+                'detail': True,
+            }
+        )
+        logger.warning(f"Cropping da imagem {obj.fotografia} realizado com sucesso")
+    except Exception as e:
+        logger.error(e)
+        logger.error('erro processando arquivo: %s' % obj.fotografia.path)
+
+    return thumbnail_url
 
 
 def is_weak_password(password):
