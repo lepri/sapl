@@ -400,7 +400,7 @@ def get_presentes(pk, response, materia):
                  'nome': p.parlamentar.nome_parlamentar,
                  'partido': partido,
                  'voto': '',
-                 'fotografia': p.parlamentar.fotografia.url
+                 'fotografia': p.parlamentar.fotografia_cropped
                  })
 
         elif not p.parlamentar.ativo or not mandatos:
