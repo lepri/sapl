@@ -1513,8 +1513,7 @@ class LogotipoView(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         casa = get_casalegislativa()
-        logo = casa and casa.logotipo and casa.logotipo.name
-        return os.path.join(settings.MEDIA_URL, logo) if logo else STATIC_LOGO
+        return casa.logotipo.url if casa and casa.logotipo else STATIC_LOGO
 
 
 def filtro_campos(dicionario):

@@ -16,6 +16,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, ValidationError
+from django.core.files.storage import default_storage
 from django.db.models import Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.http.response import Http404, HttpResponseRedirect
@@ -2065,9 +2066,9 @@ class MateriaLegislativaPesquisaView(MultiFormatOutputMixin, FilterView):
 
     def hook_texto_original(self, obj):
         url = self.request.build_absolute_uri('/')[:-1]
-        texto_original = obj.texto_original if not isinstance(
-            obj, dict) else obj["texto_original"]
-        return f'{url}/media/{texto_original}'
+        if not isinstance(obj, dict):
+            return self.request.build_absolute_uri(obj.texto_original.url)
+        return f'{url}{default_storage.url(obj["texto_original"])}'
 
     def hook_autoria(self, obj):
         """

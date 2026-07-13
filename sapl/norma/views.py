@@ -4,6 +4,7 @@ import re
 
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.http.response import HttpResponseRedirect
@@ -169,10 +170,9 @@ class NormaPesquisaView(MultiFormatOutputMixin, FilterView):
 
     def hook_texto_integral(self, obj):
         url = self.request.build_absolute_uri('/')[:-1]
-        texto_integral = obj.texto_integral if not isinstance(
-            obj, dict) else obj["texto_integral"]
-
-        return f'{url}/media/{texto_integral}'
+        if not isinstance(obj, dict):
+            return self.request.build_absolute_uri(obj.texto_integral.url)
+        return f'{url}{default_storage.url(obj["texto_integral"])}'
 
     def get_queryset(self):
         qs = super().get_queryset()
