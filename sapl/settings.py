@@ -70,6 +70,7 @@ SAPL_APPS = (
 )
 
 INSTALLED_APPS = (
+                     'django_tenants',
                      'django_admin_bootstrapped',  # must come before django.contrib.admin
                      'django.contrib.admin',
                      'django.contrib.auth',
@@ -101,6 +102,11 @@ INSTALLED_APPS = (
                      'django_prometheus',
 
                  ) + SAPL_APPS
+
+SHARED_APPS = INSTALLED_APPS
+TENANT_APPS = INSTALLED_APPS
+TENANT_CREATION_FAKES_MIGRATIONS = True
+TENANT_BASE_SCHEMA = "public"
 
 # FTS = Full Text Search
 # Desabilita a indexação textual até encontramos uma solução para a issue
@@ -138,6 +144,7 @@ HAYSTACK_CONNECTIONS = {
 }
 
 MIDDLEWARE = [
+    'django_tenants.middleware.main.TenantMainMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -251,12 +258,13 @@ DATABASES = {
 
 def setup_db_tz():
     db = DATABASES["default"]
+    db["ENGINE"] = "django_tenants.postgresql_backend"
     # Normalize legacy engine alias returned by old dj-database-url
     if db.get("ENGINE") == "django.db.backends.postgresql_psycopg2":
         db["ENGINE"] = "django.db.backends.postgresql"
 
     # Force UTC per connection for Postgres (fixes Django’s utc_tzinfo_factory assertion)
-    if db.get("ENGINE") == "django.db.backends.postgresql":
+    if db.get("ENGINE") == "django.db.backends.postgresql" or db["ENGINE"] == "django_tenants.postgresql_backend":
         opts = db.setdefault("OPTIONS", {})
         existing = (opts.get("options") or "").strip()
         force_utc = "-c timezone=UTC"
@@ -276,6 +284,10 @@ def setup_db_tz():
 
 
 setup_db_tz()
+
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
 
 IMAGE_CROPPING_JQUERY_URL = None
 THUMBNAIL_PROCESSORS = (
@@ -472,3 +484,9 @@ PASSWORD_HASHERS = [
 ]
 
 LOGOUT_REDIRECT_URL = '/login'
+
+# BASE_DOMAIN = "localhost"
+PUBLIC_SCHEMA_NAME = "public"
+
+TENANT_MODEL = "base.Cliente"
+TENANT_DOMAIN_MODEL = "base.Dominio"
