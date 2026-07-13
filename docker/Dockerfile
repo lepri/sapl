@@ -111,6 +111,7 @@ RUN if [ "$WITH_NGINX" = "1" ]; then \
 # Cache de fontes e collectstatic
 # NÃO atualizamos pip aqui (já veio pronto do builder)
 RUN fc-cache -fv \
+ && python manage.py check \
  && python manage.py collectstatic --noinput --clear
 
 RUN rm -f /var/interlegis/sapl/sapl/.env /var/interlegis/sapl/sapl.db || true
