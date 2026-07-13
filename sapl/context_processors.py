@@ -11,7 +11,9 @@ def parliament_info(request):
     from sapl.base.views import get_casalegislativa
     casa = get_casalegislativa()
     if casa:
-        return casa.__dict__
+        context = casa.__dict__.copy()
+        context['logotipo'] = casa.logotipo
+        return context
     else:
         return {}
 
