@@ -31,6 +31,7 @@ services:
       ADMIN_PASSWORD: interlegis
       ADMIN_EMAIL: email@dominio.net
       DEBUG: 'False'
+      #LOGGING_CONSOLE_VERBOSE: 'True'
       EMAIL_PORT: 587
       EMAIL_USE_TLS: 'False'
       EMAIL_HOST: smtp.dominio.net
@@ -59,5 +60,20 @@ networks:
     driver: bridge
 volumes:
   sapldb_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/HC_Volume_106251986/sapldb_data'
   sapl_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/HC_Volume_106251986/sapl_data'
   sapl_media:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/HC_Volume_106251986/sapl_media'

@@ -16,6 +16,7 @@ See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 import logging
 import socket
 import sys
+import os
 
 from decouple import config
 from dj_database_url import parse as db_url
@@ -160,10 +161,10 @@ MIDDLEWARE = [
     'sapl.middleware.CheckWeakPasswordMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
-if DEBUG:
-    INSTALLED_APPS += ('debug_toolbar',)
-    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware', ]
-    INTERNAL_IPS = ('127.0.0.1')
+#if DEBUG:
+    #INSTALLED_APPS += ('debug_toolbar',)
+    #MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware', ]
+    #INTERNAL_IPS = ('127.0.0.1')
 
 SITE_URL = config('SITE_URL', cast=str, default='')
 
@@ -223,7 +224,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': ['sapl/templates'],
-        'APP_DIRS': True,
+        #'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -237,9 +238,18 @@ TEMPLATES = [
                 'sapl.context_processors.google_recaptcha_configured',
                 'sapl.context_processors.enable_sapn',
             ],
+            "loaders": [
+                "django_tenants.template.loaders.filesystem.Loader",  # Must be first
+                "django.template.loaders.filesystem.Loader",
+                "django.template.loaders.app_directories.Loader",
+            ],
             'debug': DEBUG
         },
     },
+]
+
+MULTITENANT_TEMPLATE_DIRS = [
+    "/var/interlegis/sapl/tenants/%s/templates"
 ]
 
 WSGI_APPLICATION = 'sapl.wsgi.application'
@@ -401,12 +411,23 @@ STATICFILES_DIRS = (
 )
 
 STATICFILES_FINDERS = (
+    'django_tenants.staticfiles.finders.TenantFileSystemFinder',
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
 
 MEDIA_ROOT = PROJECT_DIR.child("media")
 MEDIA_URL = '/media/'
+
+MULTITENANT_STATICFILES_DIRS = [
+    os.path.join( "/var/interlegis/sapl", "tenants/%s/static" ),
+]
+
+DEFAULT_FILE_STORAGE = "django_tenants.files.storage.TenantFileSystemStorage"
+
+MULTITENANT_RELATIVE_MEDIA_ROOT = ""
+
+REWRITE_STATIC_URLS = True
 
 FILE_UPLOAD_PERMISSIONS = 0o644
 

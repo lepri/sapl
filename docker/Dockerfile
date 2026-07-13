@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Venv independente do sistema
 RUN python -m venv "${VENV_DIR}" \
- && "${VENV_DIR}/bin/pip" install --upgrade pip setuptools wheel
+ && "${VENV_DIR}/bin/pip" install --upgrade pip "setuptools<81" wheel
 
 WORKDIR /build
 
