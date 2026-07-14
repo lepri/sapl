@@ -25,7 +25,10 @@ from django.contrib.contenttypes.fields import (GenericForeignKey, GenericRel,
                                                 GenericRelation)
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.files.storage import FileSystemStorage
+try:
+    from django_tenants.files.storage import TenantFileSystemStorage
+except ImportError:
+    from django.core.files.storage import FileSystemStorage as TenantFileSystemStorage
 from django.core.files.uploadedfile import UploadedFile, InMemoryUploadedFile, \
     TemporaryUploadedFile
 from django.core.mail import get_connection
@@ -1201,7 +1204,7 @@ def from_date_to_datetime_utc(data):
     return dt_utc
 
 
-class OverwriteStorage(FileSystemStorage):
+class OverwriteStorage(TenantFileSystemStorage):
     """
     Solução derivada do gist: https://gist.github.com/fabiomontefuscolo/1584462
 
@@ -1211,7 +1214,7 @@ class OverwriteStorage(FileSystemStorage):
 
     def get_available_name(self, name, max_length=None):
         if self.exists(name):
-            os.remove(os.path.join(settings.MEDIA_ROOT, name))
+            self.delete(name)
         return name
 
 
