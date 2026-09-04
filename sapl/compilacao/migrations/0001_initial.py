@@ -121,7 +121,7 @@ class Migration(migrations.Migration):
                 ('data', models.DateField(blank=True, null=True, verbose_name='Data')),
                 ('ementa', models.TextField(verbose_name='Ementa')),
                 ('observacao', models.TextField(blank=True, verbose_name='Observação')),
-                ('numero', models.PositiveIntegerField(verbose_name='Número')),
+                ('numero', models.CharField(max_length=8, verbose_name='Número')),
                 ('ano', models.PositiveSmallIntegerField(verbose_name='Ano')),
                 ('participacao_social', models.NullBooleanField(choices=[(None, 'Padrão definido no Tipo'), (True, 'Sim'), (False, 'Não')], default=None, verbose_name='Participação Social')),
                 ('object_id', models.PositiveIntegerField(blank=True, default=None, null=True)),
