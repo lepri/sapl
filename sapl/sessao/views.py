@@ -1460,6 +1460,8 @@ class PainelView(PermissionRequiredForAppCrudMixin, TemplateView):
         request.session['aparte'] = 'stop'
         request.session['ordem'] = 'stop'
         request.session['consideracoes'] = 'stop'
+        request.session['cronometro_ativo'] = ''
+        request.session['cronometro_parlamentar'] = ''
 
         return TemplateView.get(self, request, *args, **kwargs)
 

@@ -14,13 +14,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: does it need this head_title here? -->
     <title>{% block head_title %}{% trans 'SAPL - Sistema de Apoio ao Processo Legislativo' %}{% endblock %}</title>
-    
+
       {% block webpack_loader_css %}
         {% render_chunk_vendors 'css' %}
         {% render_bundle  'global' 'css' %}
         {% render_bundle  'painel' 'css' %}
       {% endblock webpack_loader_css %}
-
 
     <style type="text/css">
         html, body {
@@ -32,38 +31,124 @@
           list-style-type: none;
         }
       }
+      [x-cloak] {
+        display: none !important;
+      }
+
+      /* Modo cronômetro: ocupa quase toda a tela, deixando só o cabeçalho */
+      .cronometro-fullscreen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2vh;
+        min-height: 72vh;
+        text-align: center;
+      }
+      .cronometro-fullscreen .orador-foto {
+        width: 30vh;
+        height: 30vh;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+      .cronometro-fullscreen .orador-nome {
+        font-size: 5vh;
+        line-height: 1.1;
+      }
+      .cronometro-fullscreen .cronometro-tipo {
+        font-size: 4vh;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .cronometro-fullscreen .cronometro-tempo {
+        font-size: 26vh;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        font-weight: bold;
+      }
+      .cronometro-fullscreen .cronometro-tempo.acabando {
+        color: red;
+      }
     </style>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   </head>
-  <body class="painel-principal mx-5">
-      <audio type="hidden" id="audio" src="{% webpack_static 'audio/ring.mp3' %}"></audio>
+  <body class="painel-principal mx-5" x-data="painel" x-cloak>
+      <audio type="hidden" x-ref="audio" src="{% webpack_static 'audio/ring.mp3' %}"></audio>
 
       <div class="d-flex justify-content-center row">
         <div class="header-painel">
           <div class="header-painel-col-1">
             <div class="col-1">
-              <img src="" id="logo-painel" class="logo-painel" alt=""/>
+              <img x-bind:src="data.brasao" id="logo-painel" class="logo-painel" alt=""/>
             </div>
             <h1>
-              <span id="casa_nome" class="d-block"></span>
-              <span id="sessao_plenaria" class="d-block"></span>
+              <span x-text="data.casa_nome" id="casa_nome" class="d-block"></span>
+              <span x-text="data.sessao_plenaria" id="sessao_plenaria" class="d-block"></span>
             </h1>
           </div>
           <div class="col-2">
-            <p id="sessao_plenaria_data" class="text-value"></p>
-            <p id="sessao_plenaria_hora_inicio" class="text-value"></p>
+            <p x-text="`Data de Início: ${data.sessao_plenaria_data || ''}`" id="sessao_plenaria_data" class="text-value"></p>
+            <p x-text="`Hora de Início: ${data.sessao_plenaria_hora_inicio || ''}`" id="sessao_plenaria_hora_inicio" class="text-value"></p>
           </div>
         </div>
       </div>
       <div class="row justify-content-center">
-        <h2 class="text-danger"><span id="message"></span></h2>
+        <h2 class="text-danger">
+          <span x-show="!data.status_painel" id="message">PAINEL ENCONTRA-SE FECHADO</span>
+        </h2>
       </div>
 
-      <div class="row my-4">
-        <div class="col text-center"><span class="text-value data-hora" id="date"></span></div>
-        <div class="col text-center"><span class="text-value data-hora" id="relogio"></span></div>
+      <!-- Cronômetro em execução: só cabeçalho + orador + tempo -->
+      <div class="cronometro-fullscreen" id="cronometro_fullscreen" x-show="modoCronometro">
+        <template x-if="orador">
+          <img class="orador-foto" :src="orador.fotografia" :alt="orador.nome"/>
+        </template>
+        <div class="text-value orador-nome" x-show="orador">
+          <span x-text="orador ? orador.nome : ''"></span>
+          <span x-show="orador && orador.partido" x-text="orador ? ` (${orador.partido})` : ''"></span>
+        </div>
+        <div class="text-subtitle cronometro-tipo" x-text="cronometroLabel"></div>
+        <div class="text-value cronometro-tempo"
+             :class="{ 'acabando': timers[data.cronometro_ativo] <= 30 }"
+             x-text="formatTime(timers[data.cronometro_ativo])"></div>
       </div>
+
+      <div x-show="!modoCronometro">
+
+      <div class="row my-4">
+        <div class="col text-center"><span x-text="currentDate" class="text-value data-hora" id="date"></span></div>
+        <div class="col text-center"><span x-text="currentTime" class="text-value data-hora" id="relogio"></span></div>
+      </div>
+
       <div class="w-75 mx-auto">
-        <div id="parlamentares" class="text-value text-center fs-1"></div>
+        <div class="text-value text-center fs-1" id="parlamentares">
+          <template x-if="!data.status_painel">
+            <span style="color:white">A listagem de parlamentares só aparecerá quando o painel estiver aberto.</span>
+          </template>
+          <template x-if="data.status_painel">
+            <div class="row" id="parlamentares_list">
+              <template x-for="parlamentar in (data.presentes || [])" :key="parlamentar.id ?? parlamentar.nome">
+                <div :class="votoOculto(parlamentar) ? 'col mb-4' : 'col-md-4 mb-5 text-center d-flex align-items-center'">
+                  <div :class="votoOculto(parlamentar) ? 'd-flex align-items-center' : 'mr-3'"
+                       :style="votoOculto(parlamentar) ? '' : 'width:100px;height:100px;'">
+                    <img :src="parlamentar.fotografia"
+                         :class="votoOculto(parlamentar) ? '' : 'rounded-circle w-100 h-100'"
+                         style="object-fit:cover;" alt=""/>
+                  </div>
+                  <div :class="votoOculto(parlamentar) ? '' : 'fs-1'">
+                    <div><span x-text="parlamentar.nome"></span> (<span x-text="parlamentar.partido"></span>)</div>
+                    <template x-if="!votoOculto(parlamentar)">
+                      <div class="mt-2" style="width: 70px"
+                           :style="`background-color: ${votoColor(parlamentar.voto)}`"
+                           x-text="parlamentar.voto"></div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
       </div>
 
       <div class="row mt-3">
@@ -72,425 +157,227 @@
               <h2 class="text-subtitle mb-0">Cronômetros</h2>
             </div>
             <div class="text-value" id="box_cronometros">
-              Discurso: <span id="cronometro_discurso"></span><br>
-              Aparte: <span id="cronometro_aparte"></span><br>
-              Questão de Ordem: <span id="cronometro_ordem"></span><br>
-              Considerações Finais: <span id="cronometro_consideracoes"></span>
+              Discurso: <span x-text="formatTime(timers.discurso)" id="cronometro_discurso"></span><br>
+              Aparte: <span x-text="formatTime(timers.aparte)" id="cronometro_aparte"></span><br>
+              Questão de Ordem: <span x-text="formatTime(timers.ordem)" id="cronometro_ordem"></span><br>
+              Considerações Finais: <span x-text="formatTime(timers.consideracoes)" id="cronometro_consideracoes"></span>
             </div>
           </div>
         <div class="col-md-2"></div>
-        <div class="col-md-4 text-center painel" id="obs_materia_div">
-            <h2 class="text-subtitle" id="mat_em_votacao">Matéria em Votação</h2>
-            <span id="materia_legislativa_texto" class="text-value"></span>
+
+        <div class="col-md-4 text-center painel" id="obs_materia_div"
+             x-show="!data.sessao_solene && !data.sessao_finalizada">
+            <h2 class="text-subtitle" id="mat_em_votacao" x-text="matTitle"></h2>
+            <span x-text="matText" id="materia_legislativa_texto" class="text-value"></span>
             <br>
-            <span id="materia_legislativa_ementa" class="text-value"></span>
+            <span x-text="data.materia_legislativa_ementa" id="materia_legislativa_ementa" class="text-value"></span>
             <br>
-            <span id="observacao_materia" class="text-value"></span>
+            <span x-text="obsText" id="observacao_materia" class="text-value"></span>
           </div>
         <div class="col-md-1"></div>
 
-          <div class="col-md-3 text-left painel" id="resultado_votacao_div">
+          <div class="col-md-3 text-left painel" id="resultado_votacao_div"
+               x-show="!data.sessao_solene && !data.sessao_finalizada && data.tipo_resultado && data.tipo_votacao !== 'Leitura'">
             <div class="d-flex align-items-left justify-content-center mb-2">
               <h2 class="text-subtitle mb-0">Resultado</h2>
             </div>
             <div id="box_votacao">
-              <span id="votacao" class="text-value"></span>
-              <span id="resultado_votacao" lass="text-title"></span>
+              <ul class="text-value" id="votacao">
+                  <template x-if="data.status_painel && data.materia_legislativa_texto">
+                      <template x-for="v in votacaoLinhas" :key="v.label">
+                          <li x-text="`${v.label}: ${v.val}`"></li>
+                      </template>
+                  </template>
+                  <template x-if="data.status_painel && !data.materia_legislativa_texto">
+                      <li class="text-center">Não há votação, pois não há nenhuma matéria aberta ou já votada.</li>
+                  </template>
+                  <template x-if="!data.status_painel">
+                      <li class="text-center">A votação só aparecerá quando o painel estiver aberto</li>
+                  </template>
+              </ul>
+              <span x-text="data.tipo_resultado" :style="`color: ${resultColor}`" class="text-title" id="resultado_votacao"></span>
             </div>
           </div>
 
-          <div class="col-md-6 text-center painel" id="tema_solene_div" style="display: none">
+          <div class="col-md-6 text-center painel" id="tema_solene_div" x-show="data.sessao_solene">
             <h2 class="text-subtitle">Tema da Sessão Solene</h2>
-            <span id="sessao_solene_tema" class="text-value"></span>
+            <span x-text="data.tema_solene" id="sessao_solene_tema" class="text-value"></span>
           </div>
         </div>
+
+      </div><!-- /!modoCronometro -->
+
+  <script type="text/javascript">
+      document.addEventListener('alpine:init', () => {
+          Alpine.data('painel', () => ({
+              data: {},
+              currentDate: '',
+              currentTime: '',
+              utcOffset: parseFloat('{{ utc_offset }}'),
+              // duração configurada de cada cronômetro, usada no 'reset'
+              duracoes: {
+                  discurso: {{ 'discurso'|cronometro_to_seconds }},
+                  aparte: {{ 'aparte'|cronometro_to_seconds }},
+                  ordem: {{ 'ordem'|cronometro_to_seconds }},
+                  consideracoes: {{ 'consideracoes'|cronometro_to_seconds }}
+              },
+              timers: {
+                  discurso: {{ 'discurso'|cronometro_to_seconds }},
+                  aparte: {{ 'aparte'|cronometro_to_seconds }},
+                  ordem: {{ 'ordem'|cronometro_to_seconds }},
+                  consideracoes: {{ 'consideracoes'|cronometro_to_seconds }}
+              },
+              // 'start' | 'stop' | 'reset' — comando corrente vindo do operador
+              acoes: { discurso: '', aparte: '', ordem: '', consideracoes: '' },
+
+              labels: {
+                  discurso: 'Discurso',
+                  aparte: 'Aparte',
+                  ordem: 'Questão de Ordem',
+                  consideracoes: 'Considerações Finais'
+              },
+
+              init() {
+                  this.tick()
+                  setInterval(() => this.tick(), 500)
+
+                  this.poll()
+                  setInterval(() => this.poll(), 500)
+
+                  setInterval(() => this.decrementTimers(), 1000)
+              },
+
+              // relógio / data no fuso da casa legislativa (offset em minutos)
+              tick() {
+                  const now = new Date(Date.now() + this.utcOffset * 60000)
+                  const pad = (v) => String(v).padStart(2, '0')
+                  this.currentDate = `${pad(now.getUTCDate())}/${pad(now.getUTCMonth() + 1)}/${pad(now.getUTCFullYear() % 100)}`
+                  this.currentTime = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`
+              },
+
+              async poll() {
+                  try {
+                      const response = await fetch("{% url 'sapl.painel:dados_painel' sessao_id %}")
+                      const newData = await response.json()
+
+                      // o servidor devolve o comando do operador ('start',
+                      // 'stop' ou 'reset'), não o tempo restante
+                      Object.keys(this.timers).forEach((key) => {
+                          const acao = newData[`cronometro_${key}`] || ''
+                          if (acao === this.acoes[key]) return
+
+                          this.acoes[key] = acao
+                          if (acao === 'reset') {
+                              this.timers[key] = this.duracoes[key]
+                          }
+                      })
+
+                      this.data = newData
+                  } catch (error) {
+                      console.error('Polling error:', error)
+                  }
+              },
+
+              decrementTimers() {
+                  Object.keys(this.timers).forEach((key) => {
+                      if (this.acoes[key] === 'start' && this.timers[key] > 0) {
+                          this.timers[key]--
+                          if (this.timers[key] === 0 || this.timers[key] === 30) {
+                              this.playAlert()
+                          }
+                      }
+                  })
+              },
+
+              playAlert() {
+                  if (this.$refs.audio) this.$refs.audio.play()
+              },
+
+              formatTime(seconds) {
+                  if (isNaN(seconds) || seconds < 0) return '00:00:00'
+                  const h = Math.floor(seconds / 3600)
+                  const m = Math.floor((seconds % 3600) / 60)
+                  const s = seconds % 60
+                  return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':')
+              },
+
+              votoColor(voto) {
+                  if (voto === 'Sim') return 'green'
+                  if (voto === 'Não') return 'red'
+                  return 'transparent'
+              },
+
+              votoOculto(parlamentar) {
+                  return parlamentar.voto === 'Voto Informado' && !this.data.mostrar_voto
+              },
+
+              // Um cronômetro em execução assume quase toda a tela
+              get modoCronometro() {
+                  const ativo = this.data.cronometro_ativo
+                  return !!this.data.status_painel && !!ativo &&
+                      this.acoes[ativo] === 'start'
+              },
+
+              get cronometroLabel() {
+                  return this.labels[this.data.cronometro_ativo] || ''
+              },
+
+              // parlamentar com a palavra, indicado pelo operador ao iniciar
+              get orador() {
+                  const id = parseInt(this.data.orador_atual)
+                  if (!id) return null
+                  return (this.data.presentes || []).find(
+                      (p) => p.parlamentar_id === id) || null
+              },
+
+              get votacaoLinhas() {
+                  return [
+                      { label: 'Sim', val: this.data.numero_votos_sim },
+                      { label: 'Não', val: this.data.numero_votos_nao },
+                      { label: 'Abstenções', val: this.data.numero_abstencoes },
+                      { label: 'Presentes', val: this.data.num_presentes },
+                      { label: 'Total votos', val: this.data.total_votos }
+                  ]
+              },
+
+              get matTitle() {
+                  if (this.data.sessao_finalizada) return ''
+                  const res = (this.data.tipo_resultado || '').toUpperCase()
+                  if (res) {
+                      if (res.includes('APROV') || res.includes('REJEIT')) return 'Matéria Votada'
+                      if (res.includes('LIDA')) return 'Matéria Lida'
+                  }
+                  return this.data.tipo_votacao === 'Leitura' ? 'Matéria em Leitura' : 'Matéria em Votação'
+              },
+
+              get matText() {
+                  if (!this.data.status_painel) return 'A Matéria em votação só aparecerá quando o painel estiver aberto'
+                  return this.data.materia_legislativa_texto || 'Não há nenhuma matéria votada ou para votação.'
+              },
+
+              get obsText() {
+                  const text = this.data.observacao_materia
+                  if (!text || !this.data.status_painel) return ''
+                  return text.length > 151 ? text.substring(0, 145) + '(...)' : text
+              },
+
+              get resultColor() {
+                  const res = (this.data.tipo_resultado || '').toUpperCase()
+                  if (res.includes('APROV')) return '#7CFC00'
+                  if (res.includes('REJEIT')) return 'red'
+                  return '#45919D'
+              }
+          }))
+      })
+  </script>
   </body>
 
   {% block webpack_loader_js %}
     {% render_chunk_vendors 'js' %}
-    {% render_bundle  'global' 'js' %}  
-    {% render_bundle  'painel' 'js' %}      
+    {% render_bundle  'global' 'js' %}
+    {% render_bundle  'painel' 'js' %}
   {% endblock webpack_loader_js %}
 
   {% block webpack_loader_chunks_js %}
   {% endblock webpack_loader_chunks_js %}
-
-  <script type="text/javascript">
-
-      $(document).ready(function() {
-
-         // As constantes decisões sobre a existência ou não do horário de verão,
-         // assim como que data de início e termino do mesmo, fizeram com que fosse necessário
-         // substituir a chamada a Date() por um esquema mais elaborado, onde se
-         // recupera o offset do UTC (-3 GMT, no caso de Brasília) e seta-se
-         // manualmente. Esta informação vem do servidor, desta forma não ficamos
-         // na dependência da atualização de browser, pois tanto o Date() em JS
-         // quanto as libs python (django.utils.timezone, datetime, pytz, etc)
-         // lêem do tzdata, que precisa ser atualizado toda vez que o governo
-         // brasileiro modifica alguma coisa relacionada ao horário de verão.
-         // Recuperando essa informação do servidor só teremos que atualizar as
-         // libs tzdata (Linux) e pytz (Python) uma vez. Além disso, o uso da
-         // biblioteca moment.js é recomendada, pois ela trata data e hora
-         // melhor que o Date() do JS.
-
-         $("#date").append(moment().format("DD/MM/YY"));
-
-         var offset = parseFloat({{ utc_offset }});
-
-         //TODO: replace by a fancy jQuery clock
-         function checkTime(i) {
-             if (i<10) {i = "0" + i};  // add zero in front of numbers < 10
-                return i;
-         }
-
-         function startTime() {
-             var today = moment.utc().utcOffset(offset).format("HH:mm:ss");
-             $("#relogio").text(today)
-             var t = setTimeout(function(){
-                 startTime()
-             }, 500);
-         }
-         startTime();
-
-        var audioAlertFinish = document.getElementById("audio");
-
-        $('#cronometro_discurso').runner({
-          autostart: false,
-          countdown: true,
-          startAt: {{ 'discurso'|cronometro_to_seconds }} * 1000,
-          stopAt: 0,
-          milliseconds: false,
-          format: function(value) {
-            let h = Math.floor((value/1000) / 3600);
-            h = checkTime(h);
-            let m = Math.floor((value/1000) % 3600 / 60);
-            m = checkTime(m);
-            let s = Math.floor((value/1000) % 3600 % 60);
-            s = checkTime(s);
-            return h.toString() + ":" + m.toString() + ":" + s.toString();
-          }
-        }).on('runnerFinish', function(eventObject, info){
-          audioAlertFinish.play();
-        });
-
-        $('#cronometro_aparte').runner({
-          autostart: false,
-          countdown: true,
-          startAt:  {{ 'aparte'|cronometro_to_seconds }} * 1000,
-          stopAt: 0,
-          milliseconds: false,
-          format: function(value) {
-            let h = Math.floor((value/1000) / 3600);
-            h = checkTime(h);
-            let m = Math.floor((value/1000) % 3600 / 60);
-            m = checkTime(m);
-            let s = Math.floor((value/1000) % 3600 % 60);
-            s = checkTime(s);
-            return h.toString() + ":" + m.toString() + ":" + s.toString();
-          }
-        }).on('runnerFinish', function(eventObject, info){
-            audioAlertFinish.play();
-        });
-
-        $('#cronometro_ordem').runner({
-          autostart: false,
-          countdown: true,
-          startAt:  {{ 'ordem'|cronometro_to_seconds }} * 1000,
-          stopAt: 0,
-          milliseconds: false,
-          format: function(value) {
-            let h = Math.floor((value/1000) / 3600);
-            h = checkTime(h);
-            let m = Math.floor((value/1000) % 3600 / 60);
-            m = checkTime(m);
-            let s = Math.floor((value/1000) % 3600 % 60);
-            s = checkTime(s);
-            return h.toString() + ":" + m.toString() + ":" + s.toString();
-          }
-        }).on('runnerFinish', function(eventObject, info){
-          audioAlertFinish.play();
-        });
-
-        $('#cronometro_consideracoes').runner({
-          autostart: false,
-          countdown: true,
-          startAt:  {{ 'consideracoes'|cronometro_to_seconds }} * 1000,
-          stopAt: 0,
-          milliseconds: false,
-          format: function(value) {
-            let h = Math.floor((value/1000) / 3600);
-            h = checkTime(h);
-            let m = Math.floor((value/1000) % 3600 / 60);
-            m = checkTime(m);
-            let s = Math.floor((value/1000) % 3600 % 60);
-            s = checkTime(s);
-            return h.toString() + ":" + m.toString() + ":" + s.toString();
-          }
-        }).on('runnerFinish', function(eventObject, info){
-          audioAlertFinish.play();
-        });
-
-    var discurso_previous;
-    var ordem_previous;
-    var aparte_previous;
-    var consideracoes_previous;
-
-    var counter = 1;
-    (function poll() {
-        $.ajax({
-           url: "{% url 'sapl.painel:dados_painel' sessao_id %}",
-           type: "GET",
-           success: function(data) {
-              $("#casa_nome").text(data["casa_nome"])
-              $("#sessao_plenaria").text(data["sessao_plenaria"])
-              $("#sessao_plenaria_data").text("Data de Início: " + data["sessao_plenaria_data"])
-              $("#sessao_plenaria_hora_inicio").text("Hora de Início: " + data["sessao_plenaria_hora_inicio"])
-              $("#sessao_solene_tema").text(data["tema_solene"])
-              if (data["status_painel"] == false) {
-                $("#message").text("PAINEL ENCONTRA-SE FECHADO");
-              }
-              else {
-                $("#message").text("");
-              }
-
-              if (data["sessao_solene"]){
-                $("#resultado_votacao_div").hide();
-                $("#obs_materia_div").hide();
-                $('#tema_solene_div').show();
-              }
-
-              if (data["brasao"] != null)
-                $("#logo-painel").attr("src", data["brasao"]);
-
-              var presentes = $("#parlamentares");
-              var votacao = $("#votacao");
-              var oradores = $("#orador")
-              $("#votacao").text('');
-              presentes.children().remove();
-              votacao.children().remove();
-              oradores.children().remove();
-
-              var oradores_list = data["oradores"];
-              var presentes_list = data["presentes"];
-
-              if (data["status_painel"] == true) {
-                  mostrar_voto = data["mostrar_voto"];
-                  presentes.append('<div class="row" id="parlamentares_list">');
-                  $.each(presentes_list, function (index, parlamentar) {
-
-                    if (parlamentar.voto == 'Voto Informado' && mostrar_voto == false){
-                      $('#parlamentares_list').append('<div class="col mb-4"><div class="d-flex align-items-center">' +
-                          '<img src="' + parlamentar.fotografia + ' /></div><div> ' +
-                          parlamentar.nome + '(' + parlamentar.partido +  ')</div>')
-                    }
-                    else{
-                      $('#parlamentares_list').append(show_voto(parlamentar))
-                    }
-
-                  });
-                  $('#parlamentares_list').append('</div>')
-                  presentes.append('</div>')
-
-                  if (data["oradores"].length > 0){
-                    $('#aparecer_oradores').show();
-                    oradores.append('<table id="oradores_list">');
-                    $.each(oradores_list, function (index, orador) {
-                      $('#oradores_list').append('<tr><td style="padding-right:20px; color:white" >' +
-                          orador.numero + 'º &nbsp' +
-                          orador.nome +'</td></tr>')
-                    });
-                    oradores.append('</table>');
-                  }
-                  else {
-                    $('#aparecer_oradores').hide();
-                  }
-              }
-              else{
-                  presentes.append('<span style="color:white" id="parlamentares_list">');
-                  $('#parlamentares_list').append(
-                      '<center>A listagem de parlamentares só aparecerá quando o painel estiver aberto.</center>')
-                  presentes.append('</span>');
-
-                  oradores.append('<span style="color:white" id="oradores_list">');
-                  $('#oradores_list').append(
-                      '<center>A listagem de oradores só aparecerá quando o painel estiver aberto.</center>')
-                  oradores.append('</span>');
-
-                  votacao.append('<span id="votacao">');
-                  $("#votacao").append('<center>A votação só aparecerá quando o painel estiver aberto</center>');
-                  votacao.append('</span>');
-              }
-
-              if(data["status_painel"]){
-                if (data['materia_legislativa_texto']){
-                  var votacao = $("#votacao");
-
-                  votacao.append("<li>Sim: " + data["numero_votos_sim"] + "</li>");
-                  votacao.append("<li>Não: " + data["numero_votos_nao"] + "</li>");
-                  votacao.append("<li>Abstenções: " + data["numero_abstencoes"] + "</li>");
-                  votacao.append("<li>Presentes: " + data["num_presentes"] + "</li>");
-                  votacao.append("<li>Total votos: " + data["total_votos"] + "</li>");
-                }
-                else{
-                    $("#votacao").append('<center>Não há votação, pois não há nenhuma matéria aberta ou já votada.</center>');
-                }
-              }
-
-              var discurso_current = data["cronometro_discurso"];
-              if (!discurso_previous){
-                discurso_previous = ''
-              }
-
-              if (discurso_current != discurso_previous) {
-                $('#cronometro_discurso').runner(discurso_current);
-                discurso_previous = discurso_current;
-              }
-
-              var aparte_current = data["cronometro_aparte"];
-              if (!aparte_previous){
-                aparte_previous = ''
-              }
-
-              if (aparte_current != aparte_previous) {
-                $('#cronometro_aparte').runner(aparte_current);
-                aparte_previous = aparte_current;
-              }
-
-              var ordem_current = data["cronometro_ordem"];
-              if (!ordem_previous){
-                ordem_previous = ''
-              }
-
-              if (ordem_current != ordem_previous) {
-                $('#cronometro_ordem').runner(ordem_current);
-                ordem_previous = ordem_current;
-              }
-
-              var consideracoes_current = data["cronometro_consideracoes"];
-              if (!consideracoes_previous){
-                consideracoes_previous = ''
-              }
-
-              if (consideracoes_current != consideracoes_previous) {
-                $('#cronometro_consideracoes').runner(consideracoes_current);
-                consideracoes_previous = consideracoes_current;
-              }
-
-              if($('#cronometro_discurso').runner('info').formattedTime == "00:00:30") {
-                  audioAlertFinish.play();
-              }
-
-              if($('#cronometro_aparte').runner('info').formattedTime == "00:00:30") {
-                  audioAlertFinish.play();
-              }
-
-              if($('#cronometro_ordem').runner('info').formattedTime == "00:00:30") {
-                  audioAlertFinish.play();
-              }
-
-              if($('#cronometro_consideracoes').runner('info').formattedTime == "00:00:30") {
-                  audioAlertFinish.play();
-              }
-
-              if(data['sessao_finalizada']){
-                $("#obs_materia_div").hide();
-                $("#resultado_votacao_div").hide();
-              }
-              else if (data['materia_legislativa_texto']){
-                if (data["status_painel"] == true){
-                  $("#materia_legislativa_texto").text(data["materia_legislativa_texto"]);
-                  $("#materia_legislativa_ementa").text(data["materia_legislativa_ementa"]);
-                }
-                else{
-                  $("#materia_legislativa_texto").text('A Matéria em votação só aparecerá quando o painel estiver aberto');
-                }
-              }
-              else{
-                $("#materia_legislativa_texto").text('Não há nenhuma matéria votada ou para votação.');
-              }
-
-              if (data['observacao_materia'] && data["status_painel"] == true){
-                var texto = data['observacao_materia'];
-                if(texto.length > 151) {
-                  $("#observacao_materia").text(texto.substr(0, 145).concat('(...)'));
-                }
-                else{
-                    $("#observacao_materia").text(texto);
-                }
-              }
-              else{
-                $("#observacao_materia").text('');
-              }
-              if (data['tipo_resultado'] && data['status_painel'] == true){
-                if(data['tipo_votacao'] != 'Leitura' && !data['sessao_finalizada'] && !data["sessao_solene"]){
-                  $("#resultado_votacao").css("color", "#45919D");
-                  $("#mat_em_votacao").text("Matéria em Votação");
-                  $("#resultado_votacao_div").show();
-                }
-                else{
-                  $("#resultado_votacao_div").hide();
-                  $("#mat_em_votacao").text("Matéria em Leitura");
-                }
-                console.log(data["tipo_resultado"], data['tipo_votacao']);
-                $("#resultado_votacao").text(data["tipo_resultado"]);
-
-                var resultado_votacao_upper = $("#resultado_votacao").text().toUpperCase();
-                console.log(resultado_votacao_upper, data['tipo_resultado']);
-                if (resultado_votacao_upper.search("APROV") != -1){
-                  $("#resultado_votacao").css("color", "#7CFC00");
-                  $("#mat_em_votacao").text("Matéria Votada");
-                }
-                else if (resultado_votacao_upper.search("REJEIT") != -1){
-                  $("#resultado_votacao").css("color", "red");
-                  $("#mat_em_votacao").text("Matéria Votada");
-                }
-                else if (resultado_votacao_upper.search("LIDA") != -1){
-                  $("#mat_em_votacao").text("Matéria Lida");
-                }
-              }
-              else{
-                $("#resultado_votacao").text('');
-                if(data['tipo_votacao'] != 'Leitura')
-                  $("#mat_em_votacao").text("Matéria em Votação");
-                else{
-                  $("#mat_em_votacao").text("Matéria em Leitura");
-                }
-              }
-           },
-           error: function(err) {
-              console.error(err);
-           },
-           dataType: "json",
-           complete: setTimeout(function() {poll()}, 500),
-           timeout: 20000 // TODO: decrease
-        })
-      })();
-      });
-
-     function show_voto(parlamentar) {
-      color = 'transparent'
-      if (parlamentar.voto == "Sim"){
-          color = 'green'
-      }
-      else if (parlamentar.voto == "Não"){
-          color = 'red'
-      }
-
-      return ('<div class="col-md-4 mb-5 text-center d-flex align-items-center"><div class="mr-3" style="width:100px;height:100px;">' +
-                `<img class="rounded-circle w-100 h-100" style="object-fit:cover;" src="${parlamentar.fotografia}" /> </div><div class="fs-1"><div>` +
-                `${parlamentar.nome} (${parlamentar.partido})</div>` +
-                `<div class="mt-2" style="width: 70px; background-color:`+color+`">${parlamentar.voto}` +
-                `</div></div></div></div>`)
-     }
-
-      function changeFontSize(elementId, increment) {
-          let element = document.getElementById(elementId);
-          if (element) {
-              let currentSize = parseFloat(window.getComputedStyle(element, null).getPropertyValue('font-size'));
-              element.style.fontSize = (currentSize + increment) + 'px';
-          }
-      }
-     
-  </script>
 </html>
-

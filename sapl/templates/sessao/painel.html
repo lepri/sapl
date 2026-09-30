@@ -25,6 +25,22 @@
 	<h1>Operação do Painel Eletrônico</h1>
 	<h2><span id="relogio"></span></h2>
 	<br />
+
+  <div class="row">
+    <div class="col-md-12 mb-2"><h3>Parlamentar com a palavra</h3></div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <select id="orador_atual" name="orador_atual" class="form-control">
+        <option value="">-- Nenhum (não destacar no painel) --</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12"><small class="text-muted">Selecione antes de iniciar um cronômetro: o painel exibirá a foto do parlamentar em tela cheia enquanto o cronômetro estiver correndo. A lista acompanha o registro de presença da sessão.</small></div>
+  </div>
+  <br />
+
   <div class="row">
     <div class="col-md-12 mb-2"><h3>Cronômetro do Discurso</h3></div>
   </div>
@@ -116,6 +132,44 @@ $(function() {
 	}
 
 	startTime();
+
+	// Lista de parlamentares com a palavra: vem do mesmo endpoint do painel,
+	// para acompanhar o registro de presença sem recarregar esta tela.
+	function atualizarOradores() {
+		$.getJSON("{% url 'sapl.painel:dados_painel' pk %}", function(data) {
+			var select = $('#orador_atual');
+			var presentes = data.presentes || [];
+			var selecionado = select.val();
+
+			var opcoes = presentes.map(function(p) {
+				return '<option value="' + p.parlamentar_id + '">' +
+					$('<div>').text(p.nome).html() + '</option>';
+			}).join('');
+
+			var atual = select.find('option').slice(1).map(function() {
+				return this.value + ':' + this.text;
+			}).get().join('|');
+			var novo = presentes.map(function(p) {
+				return p.parlamentar_id + ':' + p.nome;
+			}).join('|');
+
+			if (atual === novo) {
+				return;  // nada mudou, preserva a seleção do operador
+			}
+
+			select.find('option').slice(1).remove();
+			select.append(opcoes);
+
+			// mantém o parlamentar escolhido, se ele continuar presente
+			if (selecionado && select.find('option[value="' + selecionado + '"]').length) {
+				select.val(selecionado);
+			}
+		});
+	}
+
+	atualizarOradores();
+	setInterval(atualizarOradores, 10000);
+
     var audioAlertFinish = document.getElementById("audio");
 	$('#discurso').prop('disabled', false);
 	$('#aparte').prop('disabled', false);
@@ -150,7 +204,7 @@ $(function() {
 
 		if ($('#discursoStart').text() == 'Iniciar'){
 
-			$.get('/painel/cronometro', { tipo: 'discurso', action: 'start' } );
+			$.get('/painel/cronometro', { tipo: 'discurso', action: 'start', parlamentar: $('#orador_atual').val() } );
 
 			$('#discursoReset').hide();
 			$('#discurso').runner('start');
@@ -201,7 +255,7 @@ $(function() {
 	$('#aparteStart').click(function(){
 		if ($('#aparteStart').text() == 'Iniciar') {
 
-			$.get('/painel/cronometro', { tipo: 'aparte', action: 'start' } );
+			$.get('/painel/cronometro', { tipo: 'aparte', action: 'start', parlamentar: $('#orador_atual').val() } );
 
 			$('#aparteReset').hide();
 	        $('#aparte').runner('start');
@@ -253,7 +307,7 @@ $(function() {
     $('#ordemStart').click(function() {
 		if ($('#ordemStart').text() == 'Iniciar') {
 
-			$.get('/painel/cronometro', { tipo: 'ordem', action: 'start' } );
+			$.get('/painel/cronometro', { tipo: 'ordem', action: 'start', parlamentar: $('#orador_atual').val() } );
 
 			$('#ordemReset').hide();
 	        $('#ordem').runner('start');
@@ -307,7 +361,7 @@ $(function() {
     $('#consideracoesStart').click(function(){
         if ($('#consideracoesStart').text() == 'Iniciar') {
 
-            $.get('/painel/cronometro', { tipo: 'consideracoes', action: 'start' } );
+            $.get('/painel/cronometro', { tipo: 'consideracoes', action: 'start', parlamentar: $('#orador_atual').val() } );
 
             $('#consideracoesReset').hide();
             $('#consideracoes').runner('start');

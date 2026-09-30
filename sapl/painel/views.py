@@ -337,7 +337,20 @@ def painel_votacao_view(request):
 
 @user_passes_test(check_permission)
 def cronometro_painel(request):
-    request.session[request.GET['tipo']] = request.GET['action']
+    tipo = request.GET['tipo']
+    action = request.GET['action']
+    request.session[tipo] = action
+
+    # Guarda qual cronômetro está correndo e qual parlamentar está com a
+    # palavra, para que o painel possa destacá-lo em tela cheia.
+    if action == 'start':
+        request.session['cronometro_ativo'] = tipo
+        request.session['cronometro_parlamentar'] = \
+            request.GET.get('parlamentar', '')
+    elif request.session.get('cronometro_ativo') == tipo:
+        request.session['cronometro_ativo'] = ''
+        request.session['cronometro_parlamentar'] = ''
+
     return HttpResponse({})
 
 
@@ -577,6 +590,8 @@ def get_dados_painel(request, pk):
         'cronometro_discurso': get_cronometro_status(request, 'discurso'),
         'cronometro_ordem': get_cronometro_status(request, 'ordem'),
         'cronometro_consideracoes': get_cronometro_status(request, 'consideracoes'),
+        'cronometro_ativo': request.session.get('cronometro_ativo', ''),
+        'orador_atual': request.session.get('cronometro_parlamentar', ''),
         'status_painel': sessao.painel_aberto,
         'brasao': brasao,
         'mostrar_voto': app_config.mostrar_voto
